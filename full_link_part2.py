@@ -7,9 +7,8 @@ from scipy.interpolate import PchipInterpolator
 import skrf as rf
 import warnings
 import os
+from pathlib import Path
 
-import sys
-sys.path.append(r"/Users/tamaldas/Documents/Scripts/Python/serdespy-main/")
 import serdespy as sdp
 
 import stat_eye2
@@ -433,11 +432,14 @@ def main():
     
     # TX to RX link
     print("Creating Transfer Function from end to end.\n")
-    # IMPORTANT: Update this path to your S-parameter files
-    s_param_dir = "/Users/tamaldas/Documents/Scripts/Python/SerDes/Channels/" 
-    if not os.path.exists(s_param_dir):
+
+    # Define project paths relative to this script's location
+    script_dir = Path(__file__).resolve().parent
+    s_param_dir = script_dir / "Channels"
+    
+    if not s_param_dir.is_dir():
         print(f"ERROR: S-parameter directory not found at '{s_param_dir}'")
-        print("Please create this directory, place your .s4p files in it, and retry.")
+        print("Please ensure the 'Channels' directory exists in the same directory as this script.")
         return
 
     H_base, f_base, S11_s_base, S11_l_base = gen_channel(
@@ -493,11 +495,11 @@ def main():
         km_l=-0.4,
         r_l=g['rterm_sink'],
         # Source Package
-        pkg_s=os.path.join(s_param_dir, 'PKG100GEL_95ohm_30mm_50ohmPort.s4p'),
+        pkg_s=s_param_dir / 'PKG100GEL_95ohm_30mm_50ohmPort.s4p',
         # Sink Package
-        pkg_l=os.path.join(s_param_dir, 'PKG100GEL_95ohm_30mm_50ohmPort.s4p'),
+        pkg_l=s_param_dir / 'PKG100GEL_95ohm_30mm_50ohmPort.s4p',
         # Channel
-        # ch=os.path.join(s_param_dir, '100G_PAM4_Cisco_c2c_thru_ch1.s4p'),
+        # ch=s_param_dir / '100G_PAM4_Cisco_c2c_thru_ch1.s4p',
         s_tcoil=False,
         s_tcoil_split = True,
         l_tcoil=False,
