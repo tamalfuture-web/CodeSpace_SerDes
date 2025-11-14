@@ -106,11 +106,12 @@ def main():
         pkg_l=s_param_dir / 'PKG100GEL_95ohm_30mm_50ohmPort.s4p', #Sink Package
         ch=s_param_dir / '100G_PAM4_Cisco_c2c_thru_ch1.s4p', #Channel
         s_tcoil=False,
-        s_tcoil_split = False,
+        s_tcoil_split = True,
         l_tcoil=False,
-        l_tcoil_split = False,
-        pkg_s_portswap=False,
-        pkg_l_portswap=False
+        l_tcoil_split = True,
+        pkg_s_portswap=True,
+        pkg_l_portswap=True,
+        ch_portswap=False
     )
 
     # Full Link Channel with t-coils
@@ -139,9 +140,10 @@ def main():
         s_tcoil=True,
         s_tcoil_split = True,
         l_tcoil=False,
-        l_tcoil_split = False,
+        l_tcoil_split = True,
         pkg_s_portswap=True,
-        pkg_l_portswap=True
+        pkg_l_portswap=True,
+        ch_portswap=False
     )
     if g['H_ch'] is None: return # Exit if s-params failed to load
     print("Full link: Transfer Function evaluation completed.\n")
