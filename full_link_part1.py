@@ -10,6 +10,8 @@ from pathlib import Path
 import serdespy as sdp
 import sparam_modeling as sm
 from sparam_modeling import gen_channel, frd_imp, cconv, impinterp, get_crossings
+import sslms_dlev_adapt as sda
+from sslms_dlev_adapt import sslms_dfe_dlev
 
 # Suppress warnings for cleaner output
 warnings.filterwarnings('ignore')
@@ -104,7 +106,7 @@ def main():
         r_l=g['rterm_sink'],
         pkg_s=s_param_dir / 'PKG100GEL_95ohm_30mm_50ohmPort.s4p', #Source Package
         pkg_l=s_param_dir / 'PKG100GEL_95ohm_30mm_50ohmPort.s4p', #Sink Package
-        ch=s_param_dir / '100G_PAM4_Cisco_c2c_thru_ch1.s4p', #Channel
+        #ch=s_param_dir / '100G_PAM4_Cisco_c2c_thru_ch1.s4p', #Channel
         s_tcoil=False,
         s_tcoil_split = True,
         l_tcoil=False,
@@ -136,7 +138,7 @@ def main():
         r_l=g['rterm_sink'],
         pkg_s=s_param_dir / 'PKG100GEL_95ohm_30mm_50ohmPort.s4p', #Source Package
         pkg_l=s_param_dir / 'PKG100GEL_95ohm_30mm_50ohmPort.s4p', #Sink Package
-        ch=s_param_dir / '100G_PAM4_Cisco_c2c_thru_ch1.s4p', #Channel
+        #ch=s_param_dir / '100G_PAM4_Cisco_c2c_thru_ch1.s4p', #Channel
         s_tcoil=True,
         s_tcoil_split = True,
         l_tcoil=False,
@@ -246,6 +248,20 @@ def main():
     plt.title("Time Domain Signal Waveforms")
     #eye diagram of NRZ signal after channel
     sdp.simple_eye(signal_filtered[g['os']*100+zero_cross+int(g['os']/2):], g['os']*2, 2000, Ts, "{}Gbps NRZ Signal after Channel".format(round(data_rate/1e9)))
+    
+    # VREF and DFE taps adaptation
+
+    sampling_offset = np.argmax(pulse_resp_ch)
+    dLev_init = g['tx_launch_amp'] / 2
+    num_taps = g['num_post_cursor']
+    mu_taps = 1e-3
+    mu_dlev = 1e-5
+    delta_dLev = 1e-3
+    sslms_start_iter = 1000
+
+    tap, dLev, tap_history, dLev_history = sslms_dfe_dlev(signal_filtered, g['os'], sampling_offset, num_taps, mu_taps, mu_dlev, dLev_init, delta_dLev, sslms_start_iter, plot=True)
+    print("SSLMS DFE and Vref adaptation completed.\n")
+    print(f"Final DFE taps: {tap} \nFinal Vref: {dLev}\n")
     
     
 
