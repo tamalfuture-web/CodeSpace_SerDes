@@ -185,6 +185,7 @@ def main():
 
         #Signal train after channel
         signal_filtered = sp.signal.fftconvolve(signal_jitter, imp_ch, mode="full")
+        signal_filtered = signal_filtered[0:len(signal_jitter)] #trim to original length
         
         plt.figure()
         plt.plot(t/1e-12, g['pulse_signal'], label="Input Pulse")
