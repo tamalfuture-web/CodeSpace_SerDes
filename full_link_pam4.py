@@ -35,11 +35,67 @@ g = {
     'rterm_sink': None,
 }
 
+def generate_pam4_signal(os, tx_launch_amp, ffe_taps=None, y_max=7.0):
+    """
+    Generate PAM4 signal using LUT-FFE with Gray coding.
+    
+    Parameters:
+    -----------
+    os : int
+        Oversampling factor (samples per symbol)
+    tx_launch_amp : float
+        Transmitter launch amplitude
+    ffe_taps : array-like, optional
+        FFE tap weights (default: [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+    y_max : float
+        Maximum output level for FFE (default: 7.0)
+    
+    Returns:
+    --------
+    signal_pam4_ideal : ndarray
+        PAM4 signal repeated with oversampling
+    """
+    # Generate PRBS13 data and repeat 3 times
+    data_pam4 = sdp.prbs13(1)
+    data_pam4 = np.concatenate((data_pam4, data_pam4, data_pam4), axis=0)
+    
+    # Ensure even length
+    if len(data_pam4) % 2 == 1:
+        data_pam4 = data_pam4[:-1]
+    
+    # Split into MSB and LSB
+    b1 = data_pam4[0::2]   # MSB
+    b0 = data_pam4[1::2]   # LSB
+    
+    # Gray coding: g1 = MSB, g0 = MSB XOR LSB
+    g1_bits = b1.astype(int)
+    g0_bits = np.bitwise_xor(b1, b0).astype(int)
+    
+    # Set default FFE taps if not provided
+    if ffe_taps is None:
+        ffe_taps = np.array([1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], dtype=float)
+    
+    # Create FFE and process signal
+    ffe = Pam4LutFfe2Tap(ffe_taps, y_max=y_max)
+    y_pam4 = np.empty_like(g1_bits, dtype=float)
+    for i in range(len(g1_bits)):
+        y_pam4[i] = ffe.step_analog(int(g1_bits[i]), int(g0_bits[i]))
+    
+    # Scale to launch amplitude
+    scale = tx_launch_amp / 6.0  # 0.6/6 = 0.1 V per PAM4 step
+    pam4_analog = scale * y_pam4  # -> {-0.3,-0.1,+0.1,+0.3} V for main-only case
+    
+    # Apply oversampling
+    signal_pam4_ideal = np.repeat(pam4_analog, os)
+    
+    return signal_pam4_ideal
+
 def main():
     # Constants from the main script
     PLOT_FREQ_RESP = True
     PLOT_PULSE_RESP = True
     ADD_RAND_JITTER = False
+    TX_FFE = True
 
     # Global Variables
     data_rate = 56e9 #NRZ
@@ -145,30 +201,6 @@ def main():
     g['ratio_oversampling'] = round(Fs / (2 * Fs_ntwk))
     print("Full link: Impulse Response evaluation completed.\n")
     
-
-    # ---------- PAM4 signal_pam4_ideal via 8-tap LUT-FFE ----------
-    data_pam4 = sdp.prbs13(1)
-    data_pam4 = np.concatenate((data_pam4, data_pam4, data_pam4), axis=0)
-
-    if len(data_pam4) % 2 == 1:
-        data_pam4 = data_pam4[:-1]
-
-    b1 = data_pam4[0::2]   # MSB
-    b0 = data_pam4[1::2]   # LSB
-
-    #Gray coding: g1 = MSB, g0 = MSB XOR LSB
-    g1_bits = b1.astype(int)
-    g0_bits = np.bitwise_xor(b1, b0).astype(int)
-
-    ffe_taps = np.array([1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], dtype=float)
-    ffe = Pam4LutFfe2Tap(ffe_taps, y_max=7.0)
-    y_pam4 = np.empty_like(g1_bits, dtype=float)
-    for i in range(len(g1_bits)):
-        y_pam4[i] = ffe.step_analog(int(g1_bits[i]), int(g0_bits[i]))
-    scale = g['tx_launch_amp'] / 6.0  # 0.6/6 = 0.1 V per PAM4 step
-    pam4_analog = scale * y_pam4      # -> {-0.3,-0.1,+0.1,+0.3} V for main-only case
-    signal_pam4_ideal = np.repeat(pam4_analog, g['os'])
-
     # Output
     if PLOT_FREQ_RESP:
         fi_nyq = np.argmin(np.abs(g['f'] - f_nyq))
@@ -191,11 +223,6 @@ def main():
         imp_ch /= np.sum(np.abs(imp_ch))
         #One bit response
         pulse_resp_ch = cconv(g['pulse_signal'], imp_ch, g['pulse_signal_length'])
-        #Signal train after channel
-        #Sending PAM4 signal through the channel
-        signal_pam4_filtered = sp.signal.fftconvolve(signal_pam4_ideal, imp_ch, mode="full")
-        signal_pam4_filtered = signal_pam4_filtered[0:len(signal_pam4_ideal)] #trim to original length
-        
         # Plot pulse response using dedicated function
         fig, ax = plot_pulse_response(t, g['pulse_signal'], pulse_resp_ch, g['os'], pulse_response_length,
                                       num_left_cursors=5, num_right_cursors=9,
@@ -204,8 +231,18 @@ def main():
         
         # Analyze cursors and create table plot
         fig_cursors, cursors, cursors_list, eye_h = analyze_and_plot_cursors(pulse_resp_ch, g['os'], 
-                                                               num_pre=1, num_post=3,
+                                                               num_pre=1, num_post=6,
                                                                title="Cursor Analysis with Values")
+        #Signal train after channel
+        if TX_FFE:
+            signal_pam4_ideal = generate_pam4_signal(os=g['os'], tx_launch_amp=g['tx_launch_amp'],ffe_taps=cursors_list)
+            signal_pam4_filtered = sp.signal.fftconvolve(signal_pam4_ideal, imp_ch, mode="full")
+            signal_pam4_filtered = signal_pam4_filtered[0:len(signal_pam4_ideal)] #trim to original length
+        else:
+            signal_pam4_ideal = generate_pam4_signal(os=g['os'], tx_launch_amp=g['tx_launch_amp'])
+            signal_pam4_filtered = sp.signal.fftconvolve(signal_pam4_ideal, imp_ch, mode="full")
+            signal_pam4_filtered = signal_pam4_filtered[0:len(signal_pam4_ideal)] #trim to original length
+        
     plt.show()
 
     #eye diagram of ideal NRZ signal

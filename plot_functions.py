@@ -124,9 +124,9 @@ def analyze_and_plot_cursors(pulse_resp_ch, os, num_pre=1, num_post=3, title="Cu
     # Build cursors_list: pre-cursors (reversed order), main, then post-cursors
     cursors_list = []
     
-    # Pre-cursors in reverse order (pre5, pre4, pre3, pre2, pre1)
+    # Pre-cursors in reverse order (respecting num_pre parameter)
     pre_values = []
-    for i in range(1, 6):
+    for i in range(1, num_pre + 1):
         idx = peak_idx - i * os
         if idx >= 0:
             cursors[f'pre (h-{i})'] = pulse_resp_ch[idx]
@@ -137,8 +137,8 @@ def analyze_and_plot_cursors(pulse_resp_ch, os, num_pre=1, num_post=3, title="Cu
     cursors_list.extend(pre_values)
     cursors_list.append(pulse_resp_main_crsr)  # Main cursor
     
-    # Post-cursors (post1, post2, post3, ...)
-    for i in range(1, 10):
+    # Post-cursors (respecting num_post parameter)
+    for i in range(1, num_post + 1):
         idx = peak_idx + i * os
         if idx < len(pulse_resp_ch):
             cursors[f'post (h{i})'] = pulse_resp_ch[idx]
