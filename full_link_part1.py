@@ -437,9 +437,15 @@ def main():
     delta_dLev = 1e-3
     sslms_start_iter = 1000
 
-    tap, dLev, tap_history, dLev_history = sslms_dfe_dlev(signal_filtered, g['os'], sampling_offset, num_taps, mu_taps, mu_dlev, dLev_init, delta_dLev, sslms_start_iter, plot=True)
+    tap, dLev, tap_history, dLev_history, signal_equalized, decisions = sslms_dfe_dlev(signal_filtered, g['os'], sampling_offset, num_taps, mu_taps, mu_dlev, dLev_init, delta_dLev, sslms_start_iter, plot=True)
     print("\nSSLMS DFE and Vref adaptation completed.\n")
     print(f"Final DFE taps: {tap} \nFinal Vref: {dLev:0.2f}\n")
+
+    arr = signal_equalized[g['os']*100:g['os']*105]
+    crossings = np.where(arr[:-1] * arr[1:] < 0)[0]
+    zero_cross = crossings[0] if len(crossings) > 0 else None
+    sdp.simple_eye(signal_equalized[g['os']*100+zero_cross+int(g['os']/2):], g['os']*2, 2000, Ts, "{}Gbps NRZ Signal after Channel".format(round(data_rate/1e9)))
+
     
 if __name__ == "__main__":
     main()

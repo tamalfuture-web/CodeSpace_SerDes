@@ -4,6 +4,16 @@ from pathlib import Path
 
 def sslms_dfe_dlev(signal, os, sampling_offset=0, num_taps=5, mu_taps=0.01, mu_dlev=0.01, dLev_init=0.0, delta_dLev=1e-3, sslms_start_iter=0, plot=False, Ts=None):
     """
+    SSLMS DFE with adaptive decision level.
+    
+    Returns:
+        Tuple containing:
+        - taps: Final DFE tap weights
+        - dLev: Final decision level (Vref)
+        - taps_history: History of tap values over time
+        - dLev_history: History of decision level over time
+        - equalized_signal: Full-resolution equalized signal (same length as input)
+        - decisions: Full-resolution symbol decisions (same length as input)
     """
     signal_downsampled = signal[sampling_offset::os]
 
@@ -108,4 +118,38 @@ def sslms_dfe_dlev(signal, os, sampling_offset=0, num_taps=5, mu_taps=0.01, mu_d
         plt.close(fig)
         print(f"Saved: {plot2_path}")
 
-    return taps, dLev, taps_history, dLev_history
+    # Compute full-resolution equalized signal and decisions
+    # Use final tap weights for full equalization
+    equalized_signal = np.zeros(len(signal))
+    decisions = np.zeros(len(signal))
+    
+    # Initialize decision history buffer
+    d_history_full = np.zeros(num_taps)
+    
+    # Process all samples (not just downsampled)
+    for i in range(len(signal)):
+        # Get appropriate tap weights (interpolate from history if needed)
+        if i >= len(taps_history[0]):
+            taps_final = taps_history[:, -1]  # Use last known taps
+        else:
+            taps_final = taps_history[:, i]
+        
+        # Get appropriate decision level
+        if i >= len(dLev_history):
+            dLev_final = dLev_history[-1]  # Use last known dLev
+        else:
+            dLev_final = dLev_history[i]
+        
+        # Apply DFE equalization
+        y_eq = signal[i] - np.dot(taps_final, d_history_full)
+        equalized_signal[i] = y_eq
+        
+        # Make symbol decision
+        d_i = np.sign(y_eq)
+        decisions[i] = d_i
+        
+        # Update decision history
+        d_history_full = np.roll(d_history_full, 1)
+        d_history_full[0] = d_i
+    
+    return taps, dLev, taps_history, dLev_history, equalized_signal, decisions
