@@ -1,4 +1,6 @@
 ################### Plotting Functions #########################
+import numpy as np
+import matplotlib.pyplot as plt
 
 def plot_pulse_response(t, pulse_signal, pulse_resp_ch, Ts, pulse_response_length, num_left_cursors=5, num_right_cursors=9, title="Pulse Response"):
     """

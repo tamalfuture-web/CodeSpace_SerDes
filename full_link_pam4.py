@@ -214,16 +214,16 @@ def main():
 
     #eye diagram of ideal NRZ signal
     if ADD_RAND_JITTER:
-        sdp.simple_eye(signal_pam4_ideal, g['os']*3, 100, Ts, "{}Gbps Ideal NRZ Signal".format(data_rate/1e9),linewidth=1.5)
+        sdp.simple_eye(signal_pam4_ideal, g['os']*3, 100, Ts, "{}Gbps Ideal PAM4 Signal".format(data_rate/1e9),linewidth=1.5)
     else:
-        sdp.simple_eye(signal_pam4_ideal, g['os']*3, 100, Ts, "{}Gbps NRZ Signal with Random Jitter".format(data_rate/1e9),linewidth=1.5)
+        sdp.simple_eye(signal_pam4_ideal, g['os']*3, 100, Ts, "{}Gbps PAM4 Signal with Random Jitter".format(data_rate/1e9),linewidth=1.5)
                 
     arr = signal_pam4_filtered[g['os']*100:g['os']*105]
     crossings = np.where(arr[:-1] * arr[1:] < 0)[0]
     zero_cross = crossings[0] if len(crossings) > 0 else None
     
     #eye diagram of NRZ signal after channel
-    sdp.simple_eye(signal_pam4_filtered[g['os']*100+zero_cross+int(g['os']/2):], g['os']*2, 2000, Ts, "{}Gbps NRZ Signal after Channel".format(round(data_rate/1e9)))
+    sdp.simple_eye(signal_pam4_filtered[g['os']*100+zero_cross+int(g['os']/2):], g['os']*2, 2000, Ts, "{}Gbps PAM4 Signal after Channel".format(round(data_rate/1e9)))
     
 if __name__ == "__main__":
     main()

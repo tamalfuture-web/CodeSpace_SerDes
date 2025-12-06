@@ -13,7 +13,7 @@ if str(workspace_root) not in sys.path:
 
 # Import the plotting module
 try:
-    import full_link_part1 as fl
+    import full_link_pam4 as fl
 except Exception as e:
     print("Error importing full_link_part1:", e)
     raise
