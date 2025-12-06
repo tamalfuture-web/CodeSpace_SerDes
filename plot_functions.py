@@ -104,8 +104,12 @@ def analyze_and_plot_cursors(pulse_resp_ch, os, num_pre=1, num_post=3, title="Cu
     
     Returns:
     --------
+    fig : matplotlib figure
+        Figure containing the plot
     cursors : dict
-        Dictionary of all extracted cursor values
+        Dictionary of all extracted cursor values (for detailed table display)
+    cursors_list : numpy array
+        Array of cursor values ordered as [pre5, pre4, pre3, pre2, pre1, main, post1, post2, post3, post4, post5, ...]
     eye_h : float
         Calculated eye height
     """
@@ -113,21 +117,40 @@ def analyze_and_plot_cursors(pulse_resp_ch, os, num_pre=1, num_post=3, title="Cu
     peak_idx = np.argmax(pulse_resp_ch)
     pulse_resp_main_crsr = pulse_resp_ch[peak_idx]
     
-    # Extract cursors
+    # Extract cursors into both dict and list
     cursors = {}
     cursors['main (h0)'] = pulse_resp_main_crsr
     
-    # Pre-cursors (up to 5)
+    # Build cursors_list: pre-cursors (reversed order), main, then post-cursors
+    cursors_list = []
+    
+    # Pre-cursors in reverse order (pre5, pre4, pre3, pre2, pre1)
+    pre_values = []
     for i in range(1, 6):
         idx = peak_idx - i * os
         if idx >= 0:
             cursors[f'pre (h-{i})'] = pulse_resp_ch[idx]
+            pre_values.insert(0, pulse_resp_ch[idx])  # Insert at beginning for reverse order
+        else:
+            pre_values.insert(0, 0.0)  # Pad with 0 if out of bounds
     
-    # Post-cursors (up to 9)
+    cursors_list.extend(pre_values)
+    cursors_list.append(pulse_resp_main_crsr)  # Main cursor
+    
+    # Post-cursors (post1, post2, post3, ...)
     for i in range(1, 10):
         idx = peak_idx + i * os
         if idx < len(pulse_resp_ch):
             cursors[f'post (h{i})'] = pulse_resp_ch[idx]
+            cursors_list.append(pulse_resp_ch[idx])
+        else:
+            cursors_list.append(0.0)  # Pad with 0 if out of bounds
+    
+    # Convert to numpy array with float type and format to 4 decimal places
+    cursors_list = np.array(cursors_list, dtype=np.float64)
+    cursors_list = np.round(cursors_list, decimals=4)
+    # Set print options to avoid scientific notation
+    np.set_printoptions(suppress=True, precision=4, formatter={'float_kind': '{:.4f}'.format})
     
     # Print to console
     print("Extracted Cursor Values:")
@@ -212,4 +235,4 @@ def analyze_and_plot_cursors(pulse_resp_ch, os, num_pre=1, num_post=3, title="Cu
                 table[(i, j)].set_facecolor('white')
     
     plt.tight_layout()
-    return fig, cursors, eye_h
+    return fig, cursors, cursors_list, eye_h

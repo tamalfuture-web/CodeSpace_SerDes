@@ -161,16 +161,12 @@ def main():
     g0_bits = np.bitwise_xor(b1, b0).astype(int)
 
     ffe_taps = np.array([1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], dtype=float)
-
     ffe = Pam4LutFfe2Tap(ffe_taps, y_max=7.0)
-
     y_pam4 = np.empty_like(g1_bits, dtype=float)
     for i in range(len(g1_bits)):
         y_pam4[i] = ffe.step_analog(int(g1_bits[i]), int(g0_bits[i]))
-
     scale = g['tx_launch_amp'] / 6.0  # 0.6/6 = 0.1 V per PAM4 step
     pam4_analog = scale * y_pam4      # -> {-0.3,-0.1,+0.1,+0.3} V for main-only case
-    
     signal_pam4_ideal = np.repeat(pam4_analog, g['os'])
 
     # Output
@@ -207,7 +203,7 @@ def main():
         plt.tight_layout()
         
         # Analyze cursors and create table plot
-        fig_cursors, cursors, eye_h = analyze_and_plot_cursors(pulse_resp_ch, g['os'], 
+        fig_cursors, cursors, cursors_list, eye_h = analyze_and_plot_cursors(pulse_resp_ch, g['os'], 
                                                                num_pre=1, num_post=3,
                                                                title="Cursor Analysis with Values")
     plt.show()
