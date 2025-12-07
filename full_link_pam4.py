@@ -98,7 +98,7 @@ def main():
     TX_FFE = True
 
     # Global Variables
-    data_rate = 56e9 #NRZ
+    data_rate = 112e9 #NRZ
     f_nyq = data_rate / 2
     g['ui'] = 1 / data_rate
     g['os'] = 128 #samples per symbol
@@ -254,11 +254,11 @@ def main():
                 
     arr = signal_pam4_filtered[g['os']*100:g['os']*105]
     crossings = np.where(arr[:-1] * arr[1:] < 0)[0]
-    zero_cross = crossings[0] if len(crossings) > 0 else None
+    zero_cross = crossings[0] if len(crossings) > 0 else 0
     
     #eye diagram of PAM4 signal after channel
     if TX_FFE:
-        sdp.simple_eye(signal_pam4_filtered[g['os']*100+zero_cross+int(g['os']/2):], g['os']*2, 2000, Ts, "{}Gbps PAM4 Signal with TX_FFE after Channel".format(round(data_rate/1e9)))
+        sdp.simple_eye(signal_pam4_filtered[g['os']*100+zero_cross+int(g['os']/2):], g['os']*2, 2000, Ts, "{}Gbps TX_FFE_PAM4 Signal after Channel".format(round(data_rate/1e9)))
     else:
         sdp.simple_eye(signal_pam4_filtered[g['os']*100+zero_cross+int(g['os']/2):], g['os']*2, 2000, Ts, "{}Gbps PAM4 Signal after Channel".format(round(data_rate/1e9)))
 
