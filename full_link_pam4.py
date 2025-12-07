@@ -235,7 +235,8 @@ def main():
                                                                title="Cursor Analysis with Values")
         #Signal train after channel
         if TX_FFE:
-            signal_pam4_ideal = generate_pam4_signal(os=g['os'], tx_launch_amp=g['tx_launch_amp'],ffe_taps=cursors_list)
+            ffe_taps, g_eff = compute_tx_ffe_zero_forcing(cursors_list, num_taps=8)
+            signal_pam4_ideal = generate_pam4_signal(os=g['os'], tx_launch_amp=g['tx_launch_amp'],ffe_taps=ffe_taps)
             signal_pam4_filtered = sp.signal.fftconvolve(signal_pam4_ideal, imp_ch, mode="full")
             signal_pam4_filtered = signal_pam4_filtered[0:len(signal_pam4_ideal)] #trim to original length
         else:
@@ -255,8 +256,11 @@ def main():
     crossings = np.where(arr[:-1] * arr[1:] < 0)[0]
     zero_cross = crossings[0] if len(crossings) > 0 else None
     
-    #eye diagram of NRZ signal after channel
-    sdp.simple_eye(signal_pam4_filtered[g['os']*100+zero_cross+int(g['os']/2):], g['os']*2, 2000, Ts, "{}Gbps PAM4 Signal after Channel".format(round(data_rate/1e9)))
-    
+    #eye diagram of PAM4 signal after channel
+    if TX_FFE:
+        sdp.simple_eye(signal_pam4_filtered[g['os']*100+zero_cross+int(g['os']/2):], g['os']*2, 2000, Ts, "{}Gbps PAM4 Signal with TX_FFE after Channel".format(round(data_rate/1e9)))
+    else:
+        sdp.simple_eye(signal_pam4_filtered[g['os']*100+zero_cross+int(g['os']/2):], g['os']*2, 2000, Ts, "{}Gbps PAM4 Signal after Channel".format(round(data_rate/1e9)))
+
 if __name__ == "__main__":
     main()
