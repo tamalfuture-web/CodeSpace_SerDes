@@ -1,3 +1,12 @@
+'''
+The script simulates a full SerDes link with PAM4 signaling, including:
+- Frequency response evaluation of the end-to-end channel with t-coils
+- Impulse and pulse response analysis
+- Time-domain signal waveform visualization and EYE diagrams
+- TX FFE with zero-forcing tap calculation using LUT method
+'''
+# Author: Tamal Das
+
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy as sp
