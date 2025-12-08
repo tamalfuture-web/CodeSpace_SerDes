@@ -2,7 +2,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-def plot_pulse_response(t, pulse_signal, pulse_resp_ch, Ts, pulse_response_length, num_left_cursors=5, num_right_cursors=9, title="Pulse Response"):
+def plot_pulse_response(t, pulse_signal, pulse_resp_ch, Ts, pulse_response_length, num_left_cursors=5, num_right_cursors=9, title="Pulse Response", plot=True):
     """
     Plot pulse response with cursor circles and data level labels (no grids).
     
@@ -24,7 +24,19 @@ def plot_pulse_response(t, pulse_signal, pulse_resp_ch, Ts, pulse_response_lengt
         Number of post-cursors to the right of peak
     title : str
         Title of the plot
+    plot : bool
+        If True, create and return the plot. If False, skip plotting and return None for fig, ax
+    
+    Returns:
+    --------
+    fig : matplotlib figure or None
+        Figure object (None if plot=False)
+    ax : matplotlib axes or None
+        Axes object (None if plot=False)
     """
+    if not plot:
+        return None, None
+    
     fig, ax = plt.subplots(figsize=(14, 6))
     ax.set_facecolor('white')  # White background, no gray
     
@@ -85,7 +97,7 @@ def plot_pulse_response(t, pulse_signal, pulse_resp_ch, Ts, pulse_response_lengt
     return fig, ax
 
 
-def analyze_and_plot_cursors(pulse_resp_ch, os, num_pre=1, num_post=3, title="Cursor Analysis"):
+def analyze_and_plot_cursors(pulse_resp_ch, os, num_pre=1, num_post=3, title="Cursor Analysis", plot=True):
     """
     Extract cursor values and plot with embedded table showing all cursor positions.
     
@@ -101,11 +113,13 @@ def analyze_and_plot_cursors(pulse_resp_ch, os, num_pre=1, num_post=3, title="Cu
         Number of post-cursors to display on plot (default 3)
     title : str
         Title of the plot
+    plot : bool
+        If True, create and return the plot. If False, skip plotting and return None for fig (default True)
     
     Returns:
     --------
-    fig : matplotlib figure
-        Figure containing the plot
+    fig : matplotlib figure or None
+        Figure containing the plot (None if plot=False)
     cursors : dict
         Dictionary of all extracted cursor values (for detailed table display)
     cursors_list : numpy array
@@ -166,73 +180,77 @@ def analyze_and_plot_cursors(pulse_resp_ch, os, num_pre=1, num_post=3, title="Cu
     else:
         print("Eye is closed")
     
-    # Create figure with plot and embedded table
-    fig, ax = plt.subplots(figsize=(14, 8))
-    ax.set_facecolor('white')
-    
-    # Plot pulse response with limited cursors (1 pre, 3 post on plot)
-    sample_indices = np.arange(len(pulse_resp_ch))
-    ax.plot(sample_indices, pulse_resp_ch, linewidth=2.5, color='darkblue', label='Pulse Response')
-    
-    # Peak
-    ax.plot(peak_idx, pulse_resp_main_crsr, marker='o', markersize=12, color='green', 
-           markerfacecolor='none', markeredgewidth=2.5, zorder=5, label=f'Peak h0={pulse_resp_main_crsr:.4f}')
-    
-    # Plot pre-cursors (only 1 on plot)
-    if 1 * os <= peak_idx:
-        idx = peak_idx - 1 * os
-        val = pulse_resp_ch[idx]
-        ax.plot(idx, val, marker='o', markersize=10, color='orange', markerfacecolor='none', 
-               markeredgewidth=2, zorder=5)
-        ax.text(idx, val + 0.015, f'h-1\n{val:.4f}', fontsize=9, ha='center', color='orange', fontweight='bold')
-    
-    # Plot post-cursors (up to 3 on plot)
-    for i in range(1, min(4, num_post + 1)):
-        idx = peak_idx + i * os
-        if idx < len(pulse_resp_ch):
+    # Create figure with plot and embedded table (only if plot=True)
+    if plot:
+        fig, ax = plt.subplots(figsize=(14, 8))
+        ax.set_facecolor('white')
+        
+        # Plot pulse response with limited cursors (1 pre, 3 post on plot)
+        sample_indices = np.arange(len(pulse_resp_ch))
+        ax.plot(sample_indices, pulse_resp_ch, linewidth=2.5, color='darkblue', label='Pulse Response')
+        
+        # Peak
+        ax.plot(peak_idx, pulse_resp_main_crsr, marker='o', markersize=12, color='green', 
+               markerfacecolor='none', markeredgewidth=2.5, zorder=5, label=f'Peak h0={pulse_resp_main_crsr:.4f}')
+        
+        # Plot pre-cursors (only 1 on plot)
+        if 1 * os <= peak_idx:
+            idx = peak_idx - 1 * os
             val = pulse_resp_ch[idx]
-            ax.plot(idx, val, marker='o', markersize=10, color='red', markerfacecolor='none', 
+            ax.plot(idx, val, marker='o', markersize=10, color='orange', markerfacecolor='none', 
                    markeredgewidth=2, zorder=5)
-            ax.text(idx, val - 0.025, f'h{i}\n{val:.4f}', fontsize=9, ha='center', color='red', fontweight='bold')
+            ax.text(idx, val + 0.015, f'h-1\n{val:.4f}', fontsize=9, ha='center', color='orange', fontweight='bold')
+        
+        # Plot post-cursors (up to 3 on plot)
+        for i in range(1, min(4, num_post + 1)):
+            idx = peak_idx + i * os
+            if idx < len(pulse_resp_ch):
+                val = pulse_resp_ch[idx]
+                ax.plot(idx, val, marker='o', markersize=10, color='red', markerfacecolor='none', 
+                       markeredgewidth=2, zorder=5)
+                ax.text(idx, val - 0.025, f'h{i}\n{val:.4f}', fontsize=9, ha='center', color='red', fontweight='bold')
+        
+        ax.set_xlabel("Sample Index", fontsize=11)
+        ax.set_ylabel("Amplitude (V)", fontsize=11)
+        ax.set_title(title, fontsize=12, fontweight='bold')
+        ax.legend(loc='upper right', fontsize=10)
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        
+        # Create table with all cursor values
+        table_data = []
+        for name, val in cursors.items():
+            table_data.append([name, f'{val:.6f}'])
+        
+        # Add eye height info
+        table_data.append(['Eye Height', f'{eye_h:.6f}V'])
+        table_data.append(['Vref', f'{pulse_resp_main_crsr:.6f}V'])
+        
+        # Embed table in figure
+        table = ax.table(cellText=table_data, 
+                        colLabels=['Cursor', 'Value (V)'],
+                        cellLoc='center',
+                        loc='center left',
+                        bbox=[1.05, 0.0, 0.35, 1.0])
+        table.auto_set_font_size(False)
+        table.set_fontsize(9)
+        table.scale(1, 1.8)
+        
+        # Style header
+        for i in range(2):
+            table[(0, i)].set_facecolor('#40466e')
+            table[(0, i)].set_text_props(weight='bold', color='white')
+        
+        # Alternate row colors
+        for i in range(1, len(table_data) + 1):
+            for j in range(2):
+                if i % 2 == 0:
+                    table[(i, j)].set_facecolor('#f0f0f0')
+                else:
+                    table[(i, j)].set_facecolor('white')
+        
+        plt.tight_layout()
+    else:
+        fig = None
     
-    ax.set_xlabel("Sample Index", fontsize=11)
-    ax.set_ylabel("Amplitude (V)", fontsize=11)
-    ax.set_title(title, fontsize=12, fontweight='bold')
-    ax.legend(loc='upper right', fontsize=10)
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    
-    # Create table with all cursor values
-    table_data = []
-    for name, val in cursors.items():
-        table_data.append([name, f'{val:.6f}'])
-    
-    # Add eye height info
-    table_data.append(['Eye Height', f'{eye_h:.6f}V'])
-    table_data.append(['Vref', f'{pulse_resp_main_crsr:.6f}V'])
-    
-    # Embed table in figure
-    table = ax.table(cellText=table_data, 
-                    colLabels=['Cursor', 'Value (V)'],
-                    cellLoc='center',
-                    loc='center left',
-                    bbox=[1.05, 0.0, 0.35, 1.0])
-    table.auto_set_font_size(False)
-    table.set_fontsize(9)
-    table.scale(1, 1.8)
-    
-    # Style header
-    for i in range(2):
-        table[(0, i)].set_facecolor('#40466e')
-        table[(0, i)].set_text_props(weight='bold', color='white')
-    
-    # Alternate row colors
-    for i in range(1, len(table_data) + 1):
-        for j in range(2):
-            if i % 2 == 0:
-                table[(i, j)].set_facecolor('#f0f0f0')
-            else:
-                table[(i, j)].set_facecolor('white')
-    
-    plt.tight_layout()
     return fig, cursors, cursors_list, eye_h

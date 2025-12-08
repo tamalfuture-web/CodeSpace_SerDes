@@ -197,13 +197,13 @@ print("Full link: Impulse Response evaluation completed.\n")
 # ============================================================================
 # Output - Frequency Response Plot
 # ============================================================================
+fi_nyq = np.argmin(np.abs(g['f'] - f_nyq))
+H_ch_loss_at_nyquist = 20 * np.log10(np.abs(g['H_ch'][fi_nyq]))
+fi_rate = np.argmin(np.abs(g['f'] - data_rate))
+H_ch_loss_at_rate = 20 * np.log10(np.abs(g['H_ch'][fi_rate]))
+print(f"Loss at {f_nyq/1e9:.1f} GHz for end to end full link: {H_ch_loss_at_nyquist:.2f}dB")
+print(f"Loss at {data_rate/1e9:.1f} GHz for end to end full link: {H_ch_loss_at_rate:.2f}dB\n")
 if PLOT_FREQ_RESP:
-    fi_nyq = np.argmin(np.abs(g['f'] - f_nyq))
-    H_ch_loss_at_nyquist = 20 * np.log10(np.abs(g['H_ch'][fi_nyq]))
-    fi_rate = np.argmin(np.abs(g['f'] - data_rate))
-    H_ch_loss_at_rate = 20 * np.log10(np.abs(g['H_ch'][fi_rate]))
-    print(f"Loss at {f_nyq/1e9:.1f} GHz for end to end full link: {H_ch_loss_at_nyquist:.2f}dB")
-    print(f"Loss at {data_rate/1e9:.1f} GHz for end to end full link: {H_ch_loss_at_rate:.2f}dB\n")
     plt.figure()
     plt.plot(g['f']/1e9, 20 * np.log10(np.abs(g['H_ch'])), label="Channel Loss")
     plt.plot(f_base/1e9, 20 * np.log10(np.abs(H_base)), label="TX-RX Link")
@@ -218,27 +218,27 @@ if PLOT_FREQ_RESP:
 # ============================================================================
 # This section takes signal_jitter as input and produces signal_filtered as output
 
-if PLOT_PULSE_RESP:
-    imp_ch = impinterp(np.fft.irfft(g['H_ch']), g['ratio_oversampling'])
-    imp_ch /= np.sum(np.abs(imp_ch))
-    
-    # One bit response
-    pulse_resp_ch = cconv(g['pulse_signal'], imp_ch, g['pulse_signal_length'])
-    
-    # Signal train after channel (MAIN OUTPUT: signal_filtered)
-    signal_filtered = sp.signal.fftconvolve(signal_jitter, imp_ch, mode="full")
-    signal_filtered = signal_filtered[0:len(signal_jitter)]  # trim to original length
-    
-    # Plot pulse response using dedicated function
-    fig, ax = plot_pulse_response(t, g['pulse_signal'], pulse_resp_ch, g['os'], pulse_response_length,
-                                  num_left_cursors=5, num_right_cursors=9,
-                                  title=f"Pulse Response of End-to-End Channel for {pulse_response_length}UI duration")
-    plt.tight_layout()
-    
-    # Analyze cursors and create table plot
-    fig_cursors, cursors, cursor_list, eye_h = analyze_and_plot_cursors(pulse_resp_ch, g['os'], 
-                                                           num_pre=1, num_post=3,
-                                                           title="Cursor Analysis with Values")
+imp_ch = impinterp(np.fft.irfft(g['H_ch']), g['ratio_oversampling'])
+imp_ch /= np.sum(np.abs(imp_ch))
+
+# One bit response
+pulse_resp_ch = cconv(g['pulse_signal'], imp_ch, g['pulse_signal_length'])
+
+# Signal train after channel (MAIN OUTPUT: signal_filtered)
+signal_filtered = sp.signal.fftconvolve(signal_jitter, imp_ch, mode="full")
+signal_filtered = signal_filtered[0:len(signal_jitter)]  # trim to original length
+
+# Plot pulse response using dedicated function (set plot=False to skip plotting here)
+fig, ax = plot_pulse_response(t, g['pulse_signal'], pulse_resp_ch, g['os'], pulse_response_length,
+                                num_left_cursors=5, num_right_cursors=9,
+                                title=f"Pulse Response of End-to-End Channel for {pulse_response_length}UI duration",
+                                plot=PLOT_PULSE_RESP)
+
+# Analyze cursors and create table plot (set plot=False to skip plotting here)
+fig_cursors, cursors, cursor_list, eye_h = analyze_and_plot_cursors(pulse_resp_ch, g['os'], 
+                                                        num_pre=1, num_post=3,
+                                                        title="Cursor Analysis with Values",
+                                                        plot=PLOT_PULSE_RESP)
 
 print("=" * 80)
 print("PRELUDE SETUP AND DFE PROCESSING COMPLETE")

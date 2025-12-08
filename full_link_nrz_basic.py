@@ -25,7 +25,9 @@ setup_plot_saving()
 # - g: global dictionary
 # - signal_ideal, signal_jitter, signal_filtered
 # - pulse_resp_ch, imp_ch, t, Ts, data_rate, etc.
-
+PLOT_FREQ_RESP = False
+PLOT_PULSE_RESP = False
+ADD_RAND_JITTER = False
 exec(open('prelude_setup_and_dfe.py').read())
 
 # ============================================================================
@@ -33,7 +35,6 @@ exec(open('prelude_setup_and_dfe.py').read())
 # ============================================================================
 
 def main():
-
     # Eye diagram of ideal NRZ signal
     if ADD_RAND_JITTER:
         sdp.simple_eye(signal_ideal, g['os']*3, 100, Ts, "{}Gbps Ideal NRZ Signal".format(data_rate/1e9), linewidth=1.5)
