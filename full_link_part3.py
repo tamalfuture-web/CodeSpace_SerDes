@@ -13,6 +13,10 @@ import serdespy as sdp
 
 import stat_eye
 
+# Setup plot saving (this will intercept plt.show() and save plots instead)
+from plot_save_utils import setup_plot_saving
+setup_plot_saving()
+
 # Suppress warnings for cleaner output
 warnings.filterwarnings('ignore')
 

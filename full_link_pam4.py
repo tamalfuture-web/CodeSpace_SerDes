@@ -15,6 +15,10 @@ import warnings
 import os
 from pathlib import Path
 
+# Setup plot saving (this will intercept plt.show() and save plots instead)
+from plot_save_utils import setup_plot_saving
+setup_plot_saving()
+
 ## Custom Libraries
 import serdespy as sdp
 import sparam_modeling as sm
