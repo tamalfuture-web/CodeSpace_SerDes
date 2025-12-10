@@ -84,7 +84,11 @@ Ts = g['ui'] / g['os']  # Time step
 pulse_response_length = 100
 total_data_width = pulse_response_length * g['ui']
 pulse_start = 3 * g['ui']
-t = np.arange(0, total_data_width, Ts)
+
+# Create time vector with precise number of samples
+num_samples = int(total_data_width / Ts) + 1
+t = np.linspace(0, total_data_width, num_samples)
+
 g['pulse_signal'] = np.zeros_like(t)
 start_index = int(pulse_start / Ts)
 end_index = int(start_index + (1 * g['ui']) / Ts)
