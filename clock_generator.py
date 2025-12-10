@@ -28,8 +28,10 @@ def generate_clock_signal(
     Returns:
         tuple: A tuple containing:
             - t (np.ndarray): The time vector for the signals (in seconds).
-            - clk_p (np.ndarray): The positive, filtered clock signal.
-            - clk_n (np.ndarray): The negative, filtered clock signal.
+            - clk_0 (np.ndarray): The 0° clock signal.
+            - clk_90 (np.ndarray): The 90° clock signal.
+            - clk_180 (np.ndarray): The 180° clock signal.
+            - clk_270 (np.ndarray): The 270° clock signal.
             - f_welch (np.ndarray): Frequency offsets for the phase noise profile (in Hz).
             - phase_noise_dbchz (np.ndarray): SSB Phase Noise in dBc/Hz.
             - ui (float): The Unit Interval in seconds.
@@ -84,6 +86,21 @@ def generate_clock_signal(
     clk_p = signal.lfilter(b, a, clk_p_ideal)
     clk_n = signal.lfilter(b, a, clk_n_ideal)
 
+    # Generate quadrature clocks (0°, 90°, 180°, 270°)
+    # 0°: clk_p (already have it)
+    clk_0 = clk_p
+    
+    # 90°: cos(phase) = sin(phase + π/2)
+    clk_90_ideal = np.cos(phase_jittered)
+    clk_90 = signal.lfilter(b, a, clk_90_ideal)
+    
+    # 180°: -sin(phase) = sin(phase + π)
+    clk_180 = clk_n
+    
+    # 270°: -cos(phase) = sin(phase + 3π/2)
+    clk_270_ideal = -clk_90_ideal
+    clk_270 = signal.lfilter(b, a, clk_270_ideal)
+
     # 5. Calculate the Phase Noise Profile
     # Method: Direct phase deviation from jitter signal (more direct approach)
     # The jitter adds phase modulation: phase_deviation = 2π * freq_hz * jitter_signal
@@ -107,7 +124,7 @@ def generate_clock_signal(
     # Avoid log of zero by using a small epsilon
     phase_noise_dbchz = 10 * np.log10(np.maximum(0.5 * psd_phase_deviation, 1e-20))
 
-    return t, clk_p, clk_n, f_welch, phase_noise_dbchz, ui
+    return t, clk_0, clk_90, clk_180, clk_270, f_welch, phase_noise_dbchz, ui
 
 
 if __name__ == '__main__':
@@ -128,7 +145,7 @@ if __name__ == '__main__':
     print(f"  RJ RMS: {rj_rms_ui*100:.2f}% of UI")
     print(f"  DJ Peak: {dj_amp_ui*100:.2f}% of UI")
 
-    t, clk_p, clk_n, f_noise, pn_dbchz, ui = generate_clock_signal(
+    t, clk_0, clk_90, clk_180, clk_270, f_noise, pn_dbchz, ui = generate_clock_signal(
         clock_freq_hz=clock_freq,
         duration_ui=duration_ui,
         samples_per_ui=samples_per_ui,
@@ -176,33 +193,43 @@ if __name__ == '__main__':
 
     # --- Plotting ---
     
-    # 1. Plot a small segment of the clock signals
-    plt.figure(figsize=(12, 8))
-    plt.suptitle(f"{clock_freq/1e9} GHz Clock with Jitter (RJ={rj_rms_ui*100:.1f}% UI, DJ={dj_amp_ui*100:.1f}% UI)", fontsize=14)
+    # 1. Plot a small segment of the quadrature clock signals
+    plt.figure(figsize=(14, 10))
+    plt.suptitle(f"{clock_freq/1e9} GHz Quadrature Clocks with Jitter (RJ={rj_rms_ui*100:.1f}% UI, DJ={dj_amp_ui*100:.1f}% UI)", fontsize=14)
 
-    ax1 = plt.subplot(2, 1, 1)
     # Display 10 clock cycles
     num_cycles_to_plot = 10
     plot_end_index = int(num_cycles_to_plot * samples_per_ui)
     
-    ax1.plot(t[:plot_end_index] * 1e12, clk_p[:plot_end_index], label='Clock+', linewidth=1.5)
-    ax1.plot(t[:plot_end_index] * 1e12, clk_n[:plot_end_index], label='Clock-', alpha=0.8, linewidth=1.5)
-    ax1.set_title(f"Complementary Clock Waveform ({num_cycles_to_plot} cycles)")
+    # Plot all 4 quadrature clocks
+    ax1 = plt.subplot(3, 1, 1)
+    ax1.plot(t[:plot_end_index] * 1e12, clk_0[:plot_end_index], label='Clock 0°', linewidth=1.5, color='blue')
+    ax1.plot(t[:plot_end_index] * 1e12, clk_90[:plot_end_index], label='Clock 90°', linewidth=1.5, color='red', alpha=0.8)
+    ax1.set_title(f"Quadrature Clocks 0° and 90° ({num_cycles_to_plot} cycles)")
     ax1.set_xlabel("Time (ps)")
     ax1.set_ylabel("Amplitude")
     ax1.grid(True, alpha=0.3)
-    ax1.legend()
+    ax1.legend(loc='upper right')
+
+    ax2 = plt.subplot(3, 1, 2)
+    ax2.plot(t[:plot_end_index] * 1e12, clk_180[:plot_end_index], label='Clock 180°', linewidth=1.5, color='green')
+    ax2.plot(t[:plot_end_index] * 1e12, clk_270[:plot_end_index], label='Clock 270°', linewidth=1.5, color='orange', alpha=0.8)
+    ax2.set_title(f"Quadrature Clocks 180° and 270° ({num_cycles_to_plot} cycles)")
+    ax2.set_xlabel("Time (ps)")
+    ax2.set_ylabel("Amplitude")
+    ax2.grid(True, alpha=0.3)
+    ax2.legend(loc='upper right')
 
     # 2. Plot the Phase Noise Profile
-    ax2 = plt.subplot(2, 1, 2)
+    ax3 = plt.subplot(3, 1, 3)
     # Plot from 1 kHz to 1 GHz offset
-    ax2.semilogx(f_noise, pn_dbchz, linewidth=2, color='darkblue')
-    ax2.set_title("Phase Noise Profile (SSB)")
-    ax2.set_xlabel("Frequency Offset (Hz)")
-    ax2.set_ylabel("SSB Phase Noise (dBc/Hz)")
-    ax2.grid(True, which='both', alpha=0.3)
-    ax2.set_xlim(1e3, 1e9)
-    ax2.set_ylim(-160, -40)
+    ax3.semilogx(f_noise, pn_dbchz, linewidth=2, color='darkblue')
+    ax3.set_title("Phase Noise Profile (SSB)")
+    ax3.set_xlabel("Frequency Offset (Hz)")
+    ax3.set_ylabel("SSB Phase Noise (dBc/Hz)")
+    ax3.grid(True, which='both', alpha=0.3)
+    ax3.set_xlim(1e3, 1e9)
+    ax3.set_ylim(-160, -40)
 
     plt.tight_layout(rect=[0, 0, 1, 0.96])
     
